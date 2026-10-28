@@ -1,0 +1,1081 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maratona Tech Nível 3 - Análise de Hipótese & Dashboard</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js CDN for interactive charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            dark: '#080811',
+                            card: '#111122',
+                            border: '#232342',
+                            purple: '#8b5cf6',
+                            neon: '#a855f7',
+                            pink: '#ec4899',
+                            cyan: '#06b6d4',
+                            emerald: '#10b981'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        body {
+            background-color: #080811;
+            color: #f3f4f6;
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+        }
+
+        /* Glassmorphism styling */
+        .glass-card {
+            background: rgba(17, 17, 34, 0.75);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(139, 92, 246, 0.2);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        .glass-card-glow {
+            background: rgba(17, 17, 34, 0.85);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(168, 85, 247, 0.4);
+            box-shadow: 0 0 25px rgba(168, 85, 247, 0.15);
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #080811;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #232342;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #8b5cf6;
+        }
+
+        /* Slide Transition Effects */
+        .slide-content {
+            display: none;
+            opacity: 0;
+            transform: translateY(12px);
+            transition: opacity 0.4s ease, transform 0.4s ease;
+        }
+
+        .slide-content.active {
+            display: block;
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Neon Glow Utility */
+        .neon-glow {
+            box-shadow: 0 0 15px rgba(168, 85, 247, 0.4);
+        }
+        
+        .neon-text-glow {
+            text-shadow: 0 0 10px rgba(168, 85, 247, 0.6);
+        }
+
+        /* Chat Scrollable Area */
+        .chat-container {
+            height: 380px;
+        }
+
+        /* Pulse animation for timer */
+        @keyframes pulse-ring {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.02); opacity: 1; }
+            100% { transform: scale(0.95); opacity: 0.8; }
+        }
+        .pulse-timer {
+            animation: pulse-ring 2s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between selection:bg-brand-purple selection:text-white">
+
+    <!-- TOP HEADER / NAV BAR -->
+    <header class="sticky top-0 z-50 glass-card border-b border-brand-border px-4 py-3 md:px-8">
+        <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
+            
+            <!-- Branding -->
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-purple to-brand-pink flex items-center justify-center font-black text-xl text-white shadow-lg shadow-purple-500/30">
+                    MT3
+                </div>
+                <div>
+                    <h1 class="font-bold text-sm md:text-base leading-tight text-white flex items-center gap-2">
+                        Maratona Tech <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-brand-purple/20 text-brand-neon border border-brand-purple/40">Fase 2 - Nível 3</span>
+                    </h1>
+                    <p class="text-xs text-gray-400">Apresentação Interativa & Dashboard de Dados</p>
+                </div>
+            </div>
+
+            <!-- Slide Navigation Pills -->
+            <nav class="hidden lg:flex items-center gap-1 bg-brand-dark/80 p-1.5 rounded-xl border border-brand-border text-xs">
+                <button onclick="goToSlide(1)" id="pill-1" class="slide-pill px-3 py-1.5 rounded-lg transition-all font-medium text-gray-400 hover:text-white flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-gray-500"></span> 1. Hipótese
+                </button>
+                <button onclick="goToSlide(2)" id="pill-2" class="slide-pill px-3 py-1.5 rounded-lg transition-all font-medium text-gray-400 hover:text-white flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-gray-500"></span> 2. Limpeza Dados
+                </button>
+                <button onclick="goToSlide(3)" id="pill-3" class="slide-pill px-3 py-1.5 rounded-lg transition-all font-medium text-gray-400 hover:text-white flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-gray-500"></span> 3. Gráficos
+                </button>
+                <button onclick="goToSlide(4)" id="pill-4" class="slide-pill px-3 py-1.5 rounded-lg transition-all font-medium text-gray-400 hover:text-white flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-gray-500"></span> 4. Chatbot IA
+                </button>
+                <button onclick="goToSlide(5)" id="pill-5" class="slide-pill px-3 py-1.5 rounded-lg transition-all font-medium text-gray-400 hover:text-white flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-gray-500"></span> 5. Conclusão & Pitch
+                </button>
+            </nav>
+
+            <!-- Navigation Actions -->
+            <div class="flex items-center gap-2">
+                <button onclick="prevSlide()" class="p-2.5 rounded-xl bg-brand-border/50 hover:bg-brand-purple/30 text-gray-300 hover:text-white transition-all active:scale-95 border border-white/5" title="Slide Anterior (Seta Esquerda)">
+                    <i class="fa-solid fa-chevron-left"></i>
+                </button>
+                <span id="slide-indicator" class="text-xs font-mono px-3 py-1.5 rounded-xl bg-brand-dark border border-brand-border text-brand-neon font-bold">
+                    01 / 05
+                </span>
+                <button onclick="nextSlide()" class="p-2.5 rounded-xl bg-brand-border/50 hover:bg-brand-purple/30 text-gray-300 hover:text-white transition-all active:scale-95 border border-white/5" title="Próximo Slide (Seta Direita)">
+                    <i class="fa-solid fa-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Top Progress Bar -->
+        <div class="w-full bg-brand-border h-1 mt-3 rounded-full overflow-hidden">
+            <div id="progress-bar" class="bg-gradient-to-r from-brand-purple via-brand-pink to-brand-cyan h-full w-1/5 transition-all duration-300"></div>
+        </div>
+    </header>
+
+    <!-- MAIN SLIDE CONTAINER -->
+    <main class="max-w-7xl mx-auto w-full px-4 py-6 md:px-8 flex-1 flex flex-col justify-center">
+
+        <!-- ==========================================
+             SLIDE 1: CAPA & HIPÓTESE
+        ========================================== -->
+        <section id="slide-1" class="slide-content active">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+                
+                <div class="lg:col-span-7 space-y-6">
+                    <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand-purple/10 border border-brand-purple/30 text-brand-neon text-xs font-medium">
+                        <i class="fa-solid fa-lightbulb"></i> Hipótese do Projeto de Pesquisa
+                    </div>
+                    
+                    <h2 class="text-3xl sm:text-5xl font-black text-white leading-tight tracking-tight">
+                        "Alunos conseguem aprender <span class="bg-clip-text text-transparent bg-gradient-to-r from-brand-neon via-brand-pink to-brand-cyan">muito melhor pela internet</span> do que na própria escola?"
+                    </h2>
+
+                    <p class="text-gray-300 text-sm sm:text-base leading-relaxed">
+                        Investigação sobre o impacto do aprendizado autônomo digital vs. o ensino tradicional presencial. Estudo desenvolvido para a 2ª Fase da Maratona Tech com dados reais extraídos e higienizados.
+                    </p>
+
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 pt-2">
+                        <div class="glass-card p-4 rounded-xl border-l-4 border-l-brand-purple">
+                            <span class="text-xs text-gray-400 block font-mono">Amostra</span>
+                            <span class="text-2xl font-black text-white">20 Alunos</span>
+                        </div>
+                        <div class="glass-card p-4 rounded-xl border-l-4 border-l-brand-pink">
+                            <span class="text-xs text-gray-400 block font-mono">Coleta</span>
+                            <span class="text-2xl font-black text-white">Google Forms</span>
+                        </div>
+                        <div class="glass-card p-4 rounded-xl border-l-4 border-l-brand-cyan col-span-2 sm:col-span-1">
+                            <span class="text-xs text-gray-400 block font-mono">Análise</span>
+                            <span class="text-2xl font-black text-white">IA + Humano</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Interactive Mini Poll Widget -->
+                <div class="lg:col-span-5">
+                    <div class="glass-card-glow p-6 rounded-2xl relative overflow-hidden">
+                        <div class="absolute -right-10 -bottom-10 w-40 h-40 bg-brand-purple/20 rounded-full blur-2xl pointer-events-none"></div>
+                        
+                        <h3 class="text-lg font-bold text-white mb-2 flex items-center gap-2">
+                            <i class="fa-solid fa-vote-yea text-brand-pink"></i> Enquete Rápida de Entrada
+                        </h3>
+                        <p class="text-xs text-gray-400 mb-6">Teste sua intuição antes de ver os dados da pesquisa:</p>
+
+                        <div id="poll-container" class="space-y-3">
+                            <button onclick="votePoll('internet')" class="w-full text-left p-4 rounded-xl bg-brand-dark/80 hover:bg-brand-purple/20 border border-brand-border hover:border-brand-purple transition-all flex items-center justify-between group">
+                                <span class="font-medium text-sm text-gray-200 group-hover:text-white">
+                                    <i class="fa-solid fa-laptop-code text-brand-cyan mr-2"></i> Aprendo mais pela Internet
+                                </span>
+                                <i class="fa-solid fa-arrow-right text-xs text-gray-500 group-hover:text-brand-neon"></i>
+                            </button>
+
+                            <button onclick="votePoll('escola')" class="w-full text-left p-4 rounded-xl bg-brand-dark/80 hover:bg-brand-purple/20 border border-brand-border hover:border-brand-purple transition-all flex items-center justify-between group">
+                                <span class="font-medium text-sm text-gray-200 group-hover:text-white">
+                                    <i class="fa-solid fa-school text-brand-pink mr-2"></i> Aprendo mais na Escola
+                                </span>
+                                <i class="fa-solid fa-arrow-right text-xs text-gray-500 group-hover:text-brand-neon"></i>
+                            </button>
+
+                            <button onclick="votePoll('ambos')" class="w-full text-left p-4 rounded-xl bg-brand-dark/80 hover:bg-brand-purple/20 border border-brand-border hover:border-brand-purple transition-all flex items-center justify-between group">
+                                <span class="font-medium text-sm text-gray-200 group-hover:text-white">
+                                    <i class="fa-solid fa-scale-balanced text-brand-purple mr-2"></i> Aprendo nos Dois de Forma Igual
+                                </span>
+                                <i class="fa-solid fa-arrow-right text-xs text-gray-500 group-hover:text-brand-neon"></i>
+                            </button>
+                        </div>
+
+                        <!-- Poll Results Hidden by default -->
+                        <div id="poll-results" class="hidden space-y-4 pt-2">
+                            <div class="text-xs font-semibold text-brand-neon uppercase tracking-wider mb-2">
+                                Resultado da Audiência Local:
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-xs text-gray-300 mb-1">
+                                    <span>Internet</span>
+                                    <span id="poll-pct-internet" class="font-bold">0%</span>
+                                </div>
+                                <div class="w-full bg-brand-dark rounded-full h-2">
+                                    <div id="bar-internet" class="bg-brand-cyan h-2 rounded-full transition-all duration-700" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-xs text-gray-300 mb-1">
+                                    <span>Escola Presencial</span>
+                                    <span id="poll-pct-escola" class="font-bold">0%</span>
+                                </div>
+                                <div class="w-full bg-brand-dark rounded-full h-2">
+                                    <div id="bar-escola" class="bg-brand-pink h-2 rounded-full transition-all duration-700" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-xs text-gray-300 mb-1">
+                                    <span>Ambos Igualmente</span>
+                                    <span id="poll-pct-ambos" class="font-bold">0%</span>
+                                </div>
+                                <div class="w-full bg-brand-dark rounded-full h-2">
+                                    <div id="bar-ambos" class="bg-brand-purple h-2 rounded-full transition-all duration-700" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            <button onclick="resetPoll()" class="text-xs text-gray-400 hover:text-white underline pt-2 block mx-auto">
+                                Votar Novamente
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- ==========================================
+             SLIDE 2: METODOLOGIA & LIMPEZA DE DADOS
+        ========================================== -->
+        <section id="slide-2" class="slide-content">
+            <div class="space-y-6">
+                <div>
+                    <span class="text-xs font-mono text-brand-cyan uppercase tracking-widest">Etapa 02 do Projeto</span>
+                    <h2 class="text-2xl sm:text-4xl font-black text-white">Coleta & Higienização de Dados Sujos</h2>
+                    <p class="text-gray-400 text-sm max-w-3xl mt-1">
+                        Respostas vindas de formulários abertos frequentemente contêm erros de digitação, respostas em branco, textos em maiúsculas desconexas ou duplicadas. Veja como nossa rotina de limpeza purifica a base de dados.
+                    </p>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    
+                    <!-- Interactive Sanitizer Controls -->
+                    <div class="lg:col-span-4 space-y-4">
+                        <div class="glass-card p-5 rounded-xl border border-brand-border space-y-4">
+                            <h3 class="font-bold text-white text-sm flex items-center gap-2">
+                                <i class="fa-solid fa-broom text-brand-neon"></i> Painel de Tratamento de Dados
+                            </h3>
+                            
+                            <ul class="text-xs text-gray-300 space-y-2 font-mono">
+                                <li class="flex items-center gap-2 text-rose-400">
+                                    <i class="fa-solid fa-xmark"></i> Remover linhas duplicadas
+                                </li>
+                                <li class="flex items-center gap-2 text-rose-400">
+                                    <i class="fa-solid fa-xmark"></i> Corrigir erros ("internetttt")
+                                </li>
+                                <li class="flex items-center gap-2 text-rose-400">
+                                    <i class="fa-solid fa-xmark"></i> Tratar campos vazios (N/A)
+                                </li>
+                                <li class="flex items-center gap-2 text-rose-400">
+                                    <i class="fa-solid fa-xmark"></i> Padronizar maiúsculas/minúsculas
+                                </li>
+                            </ul>
+
+                            <button id="clean-btn" onclick="toggleDataClean()" class="w-full py-3 px-4 rounded-xl font-bold text-xs uppercase tracking-wider bg-gradient-to-r from-brand-purple to-brand-pink text-white hover:opacity-90 transition-all shadow-lg shadow-purple-500/20 active:scale-95 flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-wand-magic-sparkles"></i> Limpar Dados com IA & Regras
+                            </button>
+
+                            <div id="cleaning-status" class="text-xs text-center font-mono text-gray-400 hidden">
+                                Status: <span class="text-emerald-400 font-bold">20/20 Registros Válidos</span>
+                            </div>
+                        </div>
+
+                        <div class="glass-card p-4 rounded-xl border border-brand-border text-xs text-gray-300 space-y-2">
+                            <div class="font-bold text-white flex items-center gap-2">
+                                <i class="fa-solid fa-circle-info text-brand-cyan"></i> Dica da Maratona:
+                            </div>
+                            <p>
+                                Limpar os dados antes da análise evita distorções nos gráficos estatísticos e garante a confiabilidade da nossa hipótese!
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Data Table -->
+                    <div class="lg:col-span-8">
+                        <div class="glass-card rounded-xl border border-brand-border overflow-hidden">
+        <div class="px-4 py-3 bg-brand-dark/90 border-b border-brand-border flex justify-between items-center">
+                                <span class="font-mono text-xs text-gray-300 font-bold">
+                                    <i class="fa-solid fa-table mr-1 text-brand-purple"></i> Planilha Google Sheets (Amostra de Pesquisa)
+                                </span>
+                                <span id="data-badge" class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                                    DADOS BRUTOS (SUJOS)
+                                </span>
+                            </div>
+
+                            <div class="overflow-x-auto max-h-[360px] overflow-y-auto">
+                                <table class="w-full text-left text-xs font-mono">
+                                    <thead class="bg-brand-card sticky top-0 text-gray-400 border-b border-brand-border">
+                                        <tr>
+                                            <th class="p-3">ID</th>
+                                            <th class="p-3">Aluno</th>
+                                            <th class="p-3">Onde Aprende Melhor</th>
+                                            <th class="p-3">Maior Vantagem Online</th>
+                                            <th class="p-3">Horas Estudo/Dia</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="survey-table-body" class="divide-y divide-brand-border/50 text-gray-300">
+                                        <!-- Dynamic JS insertion -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+        <!-- ==========================================
+             SLIDE 3: GRÁFICOS INTERATIVOS
+        ========================================== -->
+        <section id="slide-3" class="slide-content">
+            <div class="space-y-6">
+                <div class="flex flex-wrap items-center justify-between gap-4">
+                    <div>
+                        <span class="text-xs font-mono text-brand-pink uppercase tracking-widest">Etapa 03 do Projeto</span>
+                        <h2 class="text-2xl sm:text-4xl font-black text-white">Análise Gráfica & Visualização de Dados</h2>
+                    </div>
+
+                    <!-- Toggle Mode -->
+                    <div class="flex items-center bg-brand-dark p-1 rounded-xl border border-brand-border text-xs font-mono">
+                        <button id="btn-pct" onclick="setChartDataMode('pct')" class="px-3 py-1.5 rounded-lg bg-brand-purple text-white font-bold transition-all">
+                            Porcentagem (%)
+                        </button>
+                        <button id="btn-abs" onclick="setChartDataMode('abs')" class="px-3 py-1.5 rounded-lg text-gray-400 hover:text-white transition-all">
+                            Valores Absolutos (Alunos)
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                   
+                    <!-- Chart 1: Donut (Pizza) -->
+                    <div class="lg:col-span-5 glass-card p-5 rounded-2xl border border-brand-border flex flex-col justify-between">
+                        <div>
+                            <h3 class="text-base font-bold text-white mb-1 flex items-center gap-2">
+                                <i class="fa-solid fa-chart-pie text-brand-neon"></i> Local de Maior Rendimento
+                            </h3>
+                            <p class="text-xs text-gray-400 mb-4">
+                                Distribuição percentual da preferência declarada pelos 20 participantes.
+                            </p>
+                        </div>
+                        <div class="relative w-full aspect-square max-h-[260px] mx-auto">
+                            <canvas id="chartPizza"></canvas>
+                        </div>
+                        <div class="mt-4 p-3 rounded-xl bg-brand-dark/60 text-xs text-gray-300 border border-brand-border/50 text-center font-mono">
+                            <strong class="text-brand-neon">65%</strong> dos alunos afirmam aprender mais fácil na Internet!
+                        </div>
+                    </div>
+
+                    <!-- Chart 2: Column (Bar) -->
+                    <div class="lg:col-span-7 glass-card p-5 rounded-2xl border border-brand-border flex flex-col justify-between">
+                        <div>
+                            <h3 class="text-base font-bold text-white mb-1 flex items-center gap-2">
+                                <i class="fa-solid fa-chart-column text-brand-cyan"></i> Principais Vantagens do Aprendizado Online
+                            </h3>
+                            <p class="text-xs text-gray-400 mb-4">
+                                Motivos citados que explicam a facilidade de aprendizado pela internet.
+                            </p>
+                        </div>
+                        <div class="relative w-full h-[240px]">
+                            <canvas id="chartColuna"></canvas>
+                        </div>
+                        <div class="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs font-mono">
+                            <div class="p-2 rounded-lg bg-brand-dark/60 border border-brand-border">
+                                <span class="text-gray-400 block text-[10px]">1º Lugar</span>
+                                <strong class="text-brand-cyan">Ritmo Próprio</strong>
+                            </div>
+                            <div class="p-2 rounded-lg bg-brand-dark/60 border border-brand-border">
+                                <span class="text-gray-400 block text-[10px]">2º Lugar</span>
+                                <strong class="text-brand-purple">Vídeo-Aulas</strong>
+                            </div>
+                            <div class="p-2 rounded-lg bg-brand-dark/60 border border-brand-border">
+                                <span class="text-gray-400 block text-[10px]">3º Lugar</span>
+                                <strong class="text-brand-pink">Flexibilidade</strong>
+                            </div>
+                            <div class="p-2 rounded-lg bg-brand-dark/60 border border-brand-border">
+                                <span class="text-gray-400 block text-[10px]">4º Lugar</span>
+                                <strong class="text-emerald-400">Sem Pressão</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+<!-- ==========================================
+             SLIDE 4: CHATBOT IA MENTOR INTERATIVO
+        ========================================== -->
+        <section id="slide-4" class="slide-content">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+               
+                <!-- Info Column -->
+                <div class="lg:col-span-4 space-y-4">
+                    <div>
+                        <span class="text-xs font-mono text-brand-neon uppercase tracking-widest">Etapa 04 do Projeto</span>
+                        <h2 class="text-2xl sm:text-3xl font-black text-white">Chatbot Interativo "Mentor Tech"</h2>
+                        <p class="text-gray-400 text-xs sm:text-sm mt-2 leading-relaxed">
+                            Simulação interativa da nossa IA treinada com os dados da pesquisa para debater a hipótese com a banca e avaliadores.
+                        </p>
+                    </div>
+
+                    <div class="glass-card p-4 rounded-xl border border-brand-border space-y-3">
+                        <span class="text-xs font-bold text-white uppercase tracking-wider block">
+                            <i class="fa-solid fa-bolt text-amber-400 mr-1"></i> Sugestões de Perguntas:
+                        </span>
+                        <div class="flex flex-col gap-2">
+                            <button onclick="sendPresetQuestion('A escola física ainda é importante?')" class="text-left text-xs p-2.5 rounded-lg bg-brand-dark/80 hover:bg-brand-purple/20 border border-brand-border hover:border-brand-purple text-gray-300 hover:text-white transition-all">
+                                💬 "A escola física ainda é importante?"
+                            </button>
+                            <button onclick="sendPresetQuestion('Por que a internet é vista como mais rápida?')" class="text-left text-xs p-2.5 rounded-lg bg-brand-dark/80 hover:bg-brand-purple/20 border border-brand-border hover:border-brand-purple text-gray-300 hover:text-white transition-all">
+                                💬 "Por que a internet é mais rápida?"
+                            </button>
+                            <button onclick="sendPresetQuestion('Qual é o maior perigo de estudar só online?')" class="text-left text-xs p-2.5 rounded-lg bg-brand-dark/80 hover:bg-brand-purple/20 border border-brand-border hover:border-brand-purple text-gray-300 hover:text-white transition-all">
+                                💬 "Qual o perigo de estudar só online?"
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chat Widget Container -->
+                <div class="lg:col-span-8">
+                    <div class="glass-card-glow rounded-2xl border border-brand-purple/40 overflow-hidden flex flex-col">
+                       
+                        <!-- Chat Header -->
+                        <div class="p-4 bg-brand-dark/90 border-b border-brand-border flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <div class="relative">
+                                    <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-purple to-brand-cyan flex items-center justify-center text-white text-sm font-bold shadow-md">
+                                        <i class="fa-solid fa-robot"></i>
+                                    </div>
+                                    <span class="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-2 border-brand-dark"></span>
+                                </div>
+                                <div>
+                                    <h4 class="text-sm font-bold text-white leading-none">Mentor Tech Bot</h4>
+                                    <span class="text-[10px] text-gray-400 font-mono">IA Assistente da Maratona Tech</span>
+                                </div>
+                            </div>
+                            <span class="text-[10px] font-mono px-2 py-1 rounded bg-brand-purple/20 text-brand-neon border border-brand-purple/30">
+                                Gemini-Engine Active
+                            </span>
+                        </div>
+
+                        <!-- Chat Messages Window -->
+                        <div id="chat-messages" class="chat-container p-4 overflow-y-auto space-y-4 text-xs">
+                           
+                            <!-- Bot Welcome Message -->
+                            <div class="flex items-start gap-3">
+                                <div class="w-7 h-7 rounded-lg bg-brand-purple/30 text-brand-neon flex items-center justify-center shrink-0">
+                                    <i class="fa-solid fa-robot text-xs"></i>
+                                </div>
+                                <div class="glass-card p-3.5 rounded-2xl rounded-tl-none max-w-[85%] text-gray-200 border border-brand-border leading-relaxed">
+                                    Olá! Eu sou o <strong>Mentor Tech Bot</strong>. Analisei as 20 respostas da pesquisa sobre a hipótese: <em>"Alunos aprendem melhor pela internet do que na escola"</em>.
+                                    <br><br>
+                                    Pode me fazer perguntas sobre os resultados ou testar argumentos!
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <!-- Chat Input Box -->
+                        <div class="p-3 bg-brand-dark border-t border-brand-border">
+                            <form id="chat-form" onsubmit="handleChatSubmit(event)" class="flex gap-2">
+                                <input type="text" id="chat-input" placeholder="Digite sua pergunta sobre a hipótese..." class="flex-1 bg-brand-card text-xs text-white placeholder-gray-500 rounded-xl px-4 py-3 border border-brand-border focus:outline-none focus:border-brand-purple transition-all">
+                                <button type="submit" class="bg-gradient-to-r from-brand-purple to-brand-pink text-white px-5 rounded-xl font-bold hover:opacity-90 transition-all active:scale-95 flex items-center justify-center">
+                                    <i class="fa-solid fa-paper-plane text-xs"></i>
+                                </button>
+                            </form>
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- ==========================================
+             SLIDE 5: CONCLUSÃO, SENSO CRÍTICO & VIDEO TIMER
+        ========================================== -->
+        <section id="slide-5" class="slide-content">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+               
+                <!-- Critical Analysis Column -->
+                <div class="lg:col-span-7 space-y-6 flex flex-col justify-between">
+                    <div>
+                        <span class="text-xs font-mono text-emerald-400 uppercase tracking-widest">Etapa Final</span>
+                        <h2 class="text-2xl sm:text-4xl font-black text-white">Conclusão & Olhar Crítico Humano</h2>
+                    </div>
+
+                    <div class="glass-card p-5 rounded-2xl border-l-4 border-l-brand-purple space-y-3">
+                        <h3 class="font-bold text-white text-base flex items-center gap-2">
+                            <i class="fa-solid fa-brain text-brand-neon"></i> A Hipótese se Confirmou Parcialmente!
+                        </h3>
+                        <p class="text-xs sm:text-sm text-gray-300 leading-relaxed">
+                            Embora <strong>65% dos alunos</strong> sinta que absorve conteúdos com maior velocidade e autonomia na internet, o <strong>Olhar Crítico Humano</strong> revela que a escola física é insubstituível na socialização, trabalho em equipe e disciplina.
+                        </p>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="glass-card p-4 rounded-xl border border-brand-border space-y-2">
+                            <span class="text-xs font-bold text-brand-cyan flex items-center gap-1.5">
+                                <i class="fa-solid fa-globe"></i> Força da Internet
+                            </span>
+                            <p class="text-xs text-gray-400">
+                                Personalização, ritmo sob medida, apoio visual imediato e tutorias de IA 24 horas por dia.
+                            </p>
+                        </div>
+
+                        <div class="glass-card p-4 rounded-xl border border-brand-border space-y-2">
+                            <span class="text-xs font-bold text-brand-pink flex items-center gap-1.5">
+                                <i class="fa-solid fa-school"></i> Força da Escola
+                            </span>
+                            <p class="text-xs text-gray-400">
+                                Desenvolve inteligência emocional, debates presenciais, estrutura de rotina e mentoria humana direta.
+                            </p>
+                        </div>
+                    </div>
+<div class="glass-card p-4 rounded-xl border border-emerald-500/30 bg-emerald-950/10 text-xs text-emerald-300 font-mono">
+                        💡 <strong>Veredito do Projeto:</strong> O modelo ideal é o Híbrido — Usar a internet para acelerar a teoria e a escola presencial para a prática e relacionamentos sociais.
+                    </div>
+                </div>
+
+                <!-- Video Pitch Timer Tool -->
+                <div class="lg:col-span-5">
+                    <div class="glass-card-glow p-6 rounded-2xl border border-brand-purple/40 text-center flex flex-col justify-between h-full">
+                        <div>
+                            <span class="px-3 py-1 rounded-full bg-brand-pink/20 text-brand-pink border border-brand-pink/30 text-[10px] font-mono font-bold uppercase tracking-wider inline-block mb-3">
+                                <i class="fa-solid fa-video mr-1"></i> Ferramenta para Gravação
+                            </span>
+                            <h3 class="text-lg font-bold text-white">Timer do Vídeo Pitch (60s)</h3>
+                            <p class="text-xs text-gray-400 mt-1">
+                                Use este cronômetro exato para treinar e gravar o vídeo individual de 1 minuto pra Maratona Tech!
+                            </p>
+                        </div>
+
+                        <!-- Ring Timer Display -->
+                        <div class="my-6 relative w-44 h-44 mx-auto flex items-center justify-center">
+                            <svg class="w-full h-full transform -rotate-90">
+                                <circle cx="88" cy="88" r="78" stroke="currentColor" stroke-width="8" class="text-brand-border" fill="transparent" />
+                                <circle id="timer-circle" cx="88" cy="88" r="78" stroke="currentColor" stroke-width="8" class="text-brand-pink transition-all duration-1000" fill="transparent" stroke-dasharray="490" stroke-dashoffset="0" />
+                            </svg>
+                            <div class="absolute flex flex-col items-center justify-center">
+                                <span id="timer-display" class="text-4xl font-black font-mono text-white tracking-wider">01:00</span>
+                                <span id="timer-status-text" class="text-[10px] font-mono text-gray-400 uppercase mt-1">Pronto</span>
+                            </div>
+                        </div>
+
+                        <!-- Controls -->
+                        <div class="flex items-center justify-center gap-3">
+                            <button id="timer-start-btn" onclick="togglePitchTimer()" class="py-2.5 px-6 rounded-xl font-bold text-xs uppercase bg-gradient-to-r from-brand-purple to-brand-pink text-white hover:opacity-90 transition-all shadow-lg shadow-purple-500/20 active:scale-95 flex items-center gap-2">
+                                <i id="timer-icon" class="fa-solid fa-play"></i> <span id="timer-btn-text">Iniciar</span>
+                            </button>
+                            <button onclick="resetPitchTimer()" class="py-2.5 px-4 rounded-xl font-bold text-xs bg-brand-border/60 hover:bg-brand-border text-gray-300 hover:text-white transition-all active:scale-95">
+                                <i class="fa-solid fa-rotate-left"></i> Reset
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="glass-card border-t border-brand-border px-4 py-3 mt-4">
+        <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between text-xs text-gray-400 gap-2">
+            <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span>Projeto Maratona Tech - Nível 3 (2026)</span>
+            </div>
+            <div class="font-mono text-[11px] text-gray-500">
+                Desenvolvido com HTML5, Tailwind CSS, Chart.js & IA
+            </div>
+        </div>
+    </footer>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        // Global App State
+        let currentSlide = 1;
+        const totalSlides = 5;
+
+        // Raw Messy Data vs Clean Data
+        const rawSurveyData = [
+            { id: "01", name: "Lucas M.", answer: "internetttt", advantage: "ritmo proprio", hours: "3h" },
+            { id: "02", name: "Ana Clara", answer: "Escola Presencial", advantage: "Professor perto", hours: "5h" },
+            { id: "03", name: "LUCAS M.", answer: "internetttt", advantage: "ritmo proprio", hours: "3h" }, // Duplicate
+            { id: "04", name: "Mateus K.", answer: "INTERNET", advantage: "video aulas", hours: "2h" },
+            { id: "05", name: "Beatriz S.", answer: "N/A", advantage: "Sem pressao", hours: "" }, // Messy/Empty
+            { id: "06", name: "Gabriel R.", answer: "internet", advantage: "flexibilidade horario", hours: "4h" },
+            { id: "07", name: "Juliana T.", answer: "Ambos", advantage: "interacao social", hours: "3h" },
+            { id: "08", name: "Enzo F.", answer: "internet", advantage: "ritmo proprio", hours: "1h" },
+            { id: "09", name: "Sofia L.", answer: "escola", advantage: "foco maior", hours: "6h" },
+            { id: "10", name: "Pedro H.", answer: "INTERNET", advantage: "video aulas", hours: "4h" }
+        ];
+
+        const cleanedSurveyData = [
+            { id: "01", name: "Lucas M.", answer: "Internet", advantage: "Ritmo Próprio", hours: "3h/dia" },
+            { id: "02", name: "Ana Clara", answer: "Escola Presencial", advantage: "Apoio do Professor", hours: "5h/dia" },
+            { id: "04", name: "Mateus K.", answer: "Internet", advantage: "Vídeo-Aulas", hours: "2h/dia" },
+            { id: "05", name: "Beatriz S.", answer: "Internet", advantage: "Sem Pressão", hours: "2h/dia (Méd.)" },
+            { id: "06", name: "Gabriel R.", answer: "Internet", advantage: "Flexibilidade", hours: "4h/dia" },
+            { id: "07", name: "Juliana T.", answer: "Ambos de Forma Igual", advantage: "Socialização", hours: "3h/dia" },
+            { id: "08", name: "Enzo F.", answer: "Internet", advantage: "Ritmo Próprio", hours: "1h/dia" },
+            { id: "09", name: "Sofia L.", answer: "Escola Presencial", advantage: "Foco Maior", hours: "6h/dia" },
+            { id: "10", name: "Pedro H.", answer: "Internet", advantage: "Vídeo-Aulas", hours: "4h/dia" },
+            { id: "11", name: "Mariana C.", answer: "Internet", advantage: "Ritmo Próprio", hours: "3h/dia" }
+        ];
+let isDataClean = false;
+
+        // Chart Instance Variables
+        let pizzaChartInstance = null;
+        let colunaChartInstance = null;
+        let currentChartMode = 'pct'; // 'pct' or 'abs'
+
+        // Video Pitch Timer Variables
+        let pitchTimerInterval = null;
+        let pitchSecondsLeft = 60;
+        let isPitchTimerRunning = false;
+
+        // Initialize App on DOM Load
+        window.onload = function() {
+            renderTable(rawSurveyData);
+            initCharts();
+            updateSlideUI();
+
+            // Keyboard Arrow Navigation
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'ArrowRight') nextSlide();
+                if (e.key === 'ArrowLeft') prevSlide();
+            });
+        };
+
+        // Slide Navigation Logic
+        function goToSlide(slideNum) {
+            if (slideNum < 1 || slideNum > totalSlides) return;
+           
+            document.querySelectorAll('.slide-content').forEach(s => s.classList.remove('active'));
+            currentSlide = slideNum;
+           
+            const targetSlide = document.getElementById(`slide-${currentSlide}`);
+            if (targetSlide) {
+                targetSlide.classList.add('active');
+            }
+           
+            updateSlideUI();
+        }
+
+        function nextSlide() {
+            if (currentSlide < totalSlides) goToSlide(currentSlide + 1);
+        }
+
+        function prevSlide() {
+            if (currentSlide > 1) goToSlide(currentSlide - 1);
+        }
+
+        function updateSlideUI() {
+            // Update Header Counter
+            document.getElementById('slide-indicator').innerText = `0${currentSlide} / 0${totalSlides}`;
+           
+            // Update Progress Bar
+            const pct = (currentSlide / totalSlides) * 100;
+            document.getElementById('progress-bar').style.width = `${pct}%`;
+
+            // Update Pills State
+            for (let i = 1; i <= totalSlides; i++) {
+                const pill = document.getElementById(`pill-${i}`);
+                if (pill) {
+                    if (i === currentSlide) {
+                        pill.className = "slide-pill px-3 py-1.5 rounded-lg transition-all font-bold text-white bg-brand-purple/40 border border-brand-purple flex items-center gap-1.5";
+                        pill.querySelector('span').className = "w-2 h-2 rounded-full bg-brand-neon animate-pulse";
+                    } else {
+                        pill.className = "slide-pill px-3 py-1.5 rounded-lg transition-all font-medium text-gray-400 hover:text-white flex items-center gap-1.5";
+                        pill.querySelector('span').className = "w-2 h-2 rounded-full bg-gray-600";
+                    }
+                }
+            }
+        }
+
+        // SLIDE 1: Mini Poll Logic
+        function votePoll(option) {
+            const container = document.getElementById('poll-container');
+            const results = document.getElementById('poll-results');
+
+            container.classList.add('hidden');
+            results.classList.remove('hidden');
+
+            // Simulated poll percentages
+            let pInternet = 65, pEscola = 20, pAmbos = 15;
+            if (option === 'escola') { pEscola = 40; pInternet = 45; pAmbos = 15; }
+            if (option === 'ambos') { pAmbos = 35; pInternet = 45; pEscola = 20; }
+
+            document.getElementById('poll-pct-internet').innerText = pInternet + '%';
+            document.getElementById('poll-pct-escola').innerText = pEscola + '%';
+            document.getElementById('poll-pct-ambos').innerText = pAmbos + '%';
+
+            setTimeout(() => {
+                document.getElementById('bar-internet').style.width = pInternet + '%';
+                document.getElementById('bar-escola').style.width = pEscola + '%';
+                document.getElementById('bar-ambos').style.width = pAmbos + '%';
+            }, 50);
+        }
+
+        function resetPoll() {
+            document.getElementById('poll-container').classList.remove('hidden');
+            document.getElementById('poll-results').classList.add('hidden');
+            document.getElementById('bar-internet').style.width = '0%';
+            document.getElementById('bar-escola').style.width = '0%';
+            document.getElementById('bar-ambos').style.width = '0%';
+        }
+
+        // SLIDE 2: Data Sanitization Logic
+        function renderTable(data) {
+            const tbody = document.getElementById('survey-table-body');
+            tbody.innerHTML = '';
+
+            data.forEach((row) => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-brand-purple/10 transition-colors";
+               
+                const isError = row.answer.includes('ttt') || row.answer === 'N/A' || row.id === "03";
+
+                tr.innerHTML = `
+                    <td class="p-3 text-gray-500">${row.id}</td>
+                    <td class="p-3 font-semibold ${isError && !isDataClean ? 'text-amber-400' : 'text-gray-200'}">${row.name}</td>
+                    <td class="p-3">
+                        <span class="px-2 py-0.5 rounded text-[11px] ${isError && !isDataClean ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' : 'bg-brand-purple/20 text-brand-neon'}">
+                            ${row.answer}
+                        </span>
+                    </td>
+                    <td class="p-3 text-gray-300">${row.advantage}</td>
+                    <td class="p-3 text-gray-400">${row.hours || '-'}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+function toggleDataClean() {
+            const badge = document.getElementById('data-badge');
+            const btn = document.getElementById('clean-btn');
+            const status = document.getElementById('cleaning-status');
+
+            if (!isDataClean) {
+                isDataClean = true;
+                renderTable(cleanedSurveyData);
+                badge.className = "px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30";
+                badge.innerHTML = '<i class="fa-solid fa-check mr-1"></i> DADOS HIGIENIZADOS (LIMPOS)';
+                btn.innerHTML = '<i class="fa-solid fa-rotate-left"></i> Voltar aos Dados Brutos';
+                status.classList.remove('hidden');
+            } else {
+                isDataClean = false;
+                renderTable(rawSurveyData);
+                badge.className = "px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30";
+                badge.innerHTML = 'DADOS BRUTOS (SUJOS)';
+                btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Limpar Dados com IA & Regras';
+                status.classList.add('hidden');
+            }
+        }
+
+        // SLIDE 3: Interactive Charts Logic (Chart.js)
+        function initCharts() {
+            // Chart 1: Donut (Pizza)
+            const ctxPizza = document.getElementById('chartPizza').getContext('2d');
+            pizzaChartInstance = new Chart(ctxPizza, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Aprende + na Internet', 'Aprende + na Escola', 'Ambos Igualmente'],
+                    datasets: [{
+                        data: [65, 20, 15],
+                        backgroundColor: ['#a855f7', '#ec4899', '#06b6d4'],
+                        borderColor: '#111122',
+                        borderWidth: 4,
+                        hoverOffset: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: '#d1d5db', font: { family: 'Inter', size: 11 } }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const val = context.raw;
+                                    return currentChartMode === 'pct' ? ` ${val}% dos alunos` : ` ${Math.round((val/100)*20)} alunos`;
+                                }
+                            }
+                        }
+                    },
+                    cutout: '68%'
+                }
+            });
+
+            // Chart 2: Column (Bar)
+            const ctxColuna = document.getElementById('chartColuna').getContext('2d');
+            colunaChartInstance = new Chart(ctxColuna, {
+                type: 'bar',
+                data: {
+                    labels: ['Ritmo Próprio', 'Vídeo-Aulas', 'Flexibilidade', 'Sem Pressão'],
+                    datasets: [{
+                        label: 'Vantagens Apontadas',
+                        data: [45, 30, 15, 10],
+                        backgroundColor: ['#06b6d4', '#8b5cf6', '#ec4899', '#10b981'],
+                        borderRadius: 8,
+                        borderSkipped: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const val = context.raw;
+                                    return currentChartMode === 'pct' ? ` ${val}% das menções` : ` ${Math.round((val/100)*20)} respostas`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { ticks: { color: '#9ca3af', font: { size: 10 } }, grid: { display: false } },
+                        y: { ticks: { color: '#9ca3af', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.05)' } }
+                    }
+                }
+            });
+        }
+
+        function setChartDataMode(mode) {
+            currentChartMode = mode;
+            const btnPct = document.getElementById('btn-pct');
+            const btnAbs = document.getElementById('btn-abs');
+
+            if (mode === 'pct') {
+                btnPct.className = "px-3 py-1.5 rounded-lg bg-brand-purple text-white font-bold transition-all";
+                btnAbs.className = "px-3 py-1.5 rounded-lg text-gray-400 hover:text-white transition-all";
+            } else {
+                btnAbs.className = "px-3 py-1.5 rounded-lg bg-brand-purple text-white font-bold transition-all";
+                btnPct.className = "px-3 py-1.5 rounded-lg text-gray-400 hover:text-white transition-all";
+            }
+
+            pizzaChartInstance.update();
+            colunaChartInstance.update();
+        }
+
+        // SLIDE 4: Interactive Chatbot Simulator
+        function handleChatSubmit(e) {
+            e.preventDefault();
+            const input = document.getElementById('chat-input');
+            const text = input.value.trim();
+            if (!text) return;
+
+            appendChatMessage('user', text);
+            input.value = '';
+
+            // Simulate AI Typing
+            showTypingIndicator();
+
+            setTimeout(() => {
+                removeTypingIndicator();
+                const botReply = generateBotResponse(text);
+                appendChatMessage('bot', botReply);
+            }, 1000);
+        }
+
+        function sendPresetQuestion(question) {
+            document.getElementById('chat-input').value = question;
+            document.getElementById('chat-form').dispatchEvent(new Event('submit'));
+        }
+
+        function appendChatMessage(sender, text) {
+            const chatMsgs = document.getElementById('chat-messages');
+            const msgDiv = document.createElement('div');
+
+            if (sender === 'user') {
+                msgDiv.className = "flex items-start justify-end gap-3";
+                msgDiv.innerHTML = `
+                    <div class="bg-gradient-to-r from-brand-purple to-brand-pink p-3.5 rounded-2xl rounded-tr-none max-w-[85%] text-white leading-relaxed font-medium">
+                        ${text}
+                    </div>
+                    <div class="w-7 h-7 rounded-lg bg-brand-pink/30 text-brand-pink flex items-center justify-center shrink-0">
+                        <i class="fa-solid fa-user text-xs"></i>
+                    </div>
+                `;
+            } else {
+                msgDiv.className = "flex items-start gap-3";
+                msgDiv.innerHTML = `
+                    <div class="w-7 h-7 rounded-lg bg-brand-purple/30 text-brand-neon flex items-center justify-center shrink-0">
+                        <i class="fa-solid fa-robot text-xs"></i>
+                    </div>
+                    <div class="glass-card p-3.5 rounded-2xl rounded-tl-none max-w-[85%] text-gray-200 border border-brand-border leading-relaxed">
+                        ${text}
+                    </div>
+                `;
+            }
+chatMsgs.appendChild(msgDiv);
+            chatMsgs.scrollTop = chatMsgs.scrollHeight;
+        }
+
+        function showTypingIndicator() {
+            const chatMsgs = document.getElementById('chat-messages');
+            const typingDiv = document.createElement('div');
+            typingDiv.id = 'typing-indicator';
+            typingDiv.className = "flex items-start gap-3";
+            typingDiv.innerHTML = `
+                <div class="w-7 h-7 rounded-lg bg-brand-purple/30 text-brand-neon flex items-center justify-center shrink-0">
+                    <i class="fa-solid fa-robot text-xs"></i>
+                </div>
+                <div class="glass-card px-4 py-3 rounded-2xl rounded-tl-none text-gray-400 border border-brand-border flex items-center gap-1.5 font-mono text-[10px]">
+                    <span>Digitando resposta...</span>
+                    <span class="w-1.5 h-1.5 rounded-full bg-brand-purple animate-ping"></span>
+                </div>
+            `;
+            chatMsgs.appendChild(typingDiv);
+            chatMsgs.scrollTop = chatMsgs.scrollHeight;
+        }
+
+        function removeTypingIndicator() {
+            const ind = document.getElementById('typing-indicator');
+            if (ind) ind.remove();
+        }
+
+        function generateBotResponse(userMsg) {
+            const msg = userMsg.toLowerCase();
+
+            if (msg.includes('escola') && msg.includes('importante')) {
+                return "Com certeza! A pesquisa mostrou que embora a internet ganhe em velocidade de conteúdo, a escola presencial é imbatível na <strong>socialização, trabalho em equipe e inteligência emocional</strong>.";
+            } else if (msg.includes('rápida') || msg.includes('rapida') || msg.includes('internet')) {
+                return "A internet é vista como mais rápida porque permite ao aluno <strong>pausar, acelerar e escolher o formato</strong> (vídeo, artigo, simulado) que melhor se adapta ao seu próprio ritmo visual!";
+            } else if (msg.includes('perigo') || msg.includes('risco') || msg.includes('so online')) {
+                return "O maior perigo do estudo 100% online é a <strong>falta de foco por distrações</strong> e o isolamento social. Por isso sustentamos que a melhor solução é o aprendizado híbrido.";
+            } else {
+                return "Ótima reflexão! Com base nos dados das 20 pessoas entrevistadas, percebemos que o segredo não é substituir a escola pela internet, mas sim usar a internet como um superpoder acelerador dos estudos escolares!";
+            }
+        }
+
+        // SLIDE 5: Video Pitch Timer Logic (60s)
+        function togglePitchTimer() {
+            if (isPitchTimerRunning) {
+                pausePitchTimer();
+            } else {
+                startPitchTimer();
+            }
+        }
+
+        function startPitchTimer() {
+            if (pitchSecondsLeft <= 0) pitchSecondsLeft = 60;
+            isPitchTimerRunning = true;
+
+            document.getElementById('timer-btn-text').innerText = "Pausar";
+            document.getElementById('timer-icon').className = "fa-solid fa-pause";
+            document.getElementById('timer-status-text').innerText = "Gravando Pitch...";
+            document.getElementById('timer-status-text').className = "text-[10px] font-mono text-brand-pink uppercase mt-1 animate-pulse font-bold";
+
+            pitchTimerInterval = setInterval(() => {
+                pitchSecondsLeft--;
+                updateTimerDisplay();
+
+                if (pitchSecondsLeft <= 0) {
+                    clearInterval(pitchTimerInterval);
+                    isPitchTimerRunning = false;
+                    document.getElementById('timer-status-text').innerText = "Tempo Esgotado! (60s)";
+                    document.getElementById('timer-status-text').className = "text-[10px] font-mono text-emerald-400 uppercase mt-1 font-bold";
+                    document.getElementById('timer-btn-text').innerText = "Reiniciar";
+                    document.getElementById('timer-icon').className = "fa-solid fa-play";
+                }
+            }, 1000);
+        }
+
+        function pausePitchTimer() {
+            clearInterval(pitchTimerInterval);
+            isPitchTimerRunning = false;
+            document.getElementById('timer-btn-text').innerText = "Continuar";
+            document.getElementById('timer-icon').className = "fa-solid fa-play";
+            document.getElementById('timer-status-text').innerText = "Pausado";
+            document.getElementById('timer-status-text').className = "text-[10px] font-mono text-amber-400 uppercase mt-1 font-bold";
+        }
+
+        function resetPitchTimer() {
+            clearInterval(pitchTimerInterval);
+            isPitchTimerRunning = false;
+            pitchSecondsLeft = 60;
+            updateTimerDisplay();
+            document.getElementById('timer-btn-text').innerText = "Iniciar";
+            document.getElementById('timer-icon').className = "fa-solid fa-play";
+            document.getElementById('timer-status-text').innerText = "Pronto";
+            document.getElementById('timer-status-text').className = "text-[10px] font-mono text-gray-400 uppercase mt-1";
+        }
+
+        function updateTimerDisplay() {
+            const mins = Math.floor(pitchSecondsLeft / 60);
+            const secs = pitchSecondsLeft % 60;
+            document.getElementById('timer-display').innerText = `${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}`;
+
+            // Update Circle SVG offset
+            const totalDash = 490;
+            const offset = totalDash - (pitchSecondsLeft / 60) * totalDash;
+            document.getElementById('timer-circle').style.strokeDashoffset = offset;
+        }
+    </script>
+</body>
+</html>
